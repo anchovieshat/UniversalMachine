@@ -1,1 +1,6 @@
 /target
+out
+out2
+*.um
+*.umz
+umix

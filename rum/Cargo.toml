@@ -3,3 +3,6 @@
 name = "rum"
 version = "0.0.1"
 authors = ["Colin Davidson <colrdavidson@gmail.com>"]
+
+[dependencies.um]
+path = "../libum"
