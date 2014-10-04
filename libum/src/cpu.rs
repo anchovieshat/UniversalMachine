@@ -82,7 +82,7 @@ impl State {
         }
     }
     fn exec(&mut self, inst: &Instruction) {
-        println!("{}", *inst);
+        //println!("{}", *inst);
         match *inst {
             Cmov(dest, src, cond) => {
                 let newval = self.rget(src);
@@ -96,7 +96,6 @@ impl State {
                 let idx = self.rget(idxr);
                 let arr = self.rget(arrr);
                 let newval = *self.arrays.get_mut(&arr).get_mut(idx as uint);
-                self.rset(dest, newval);
             }
             Aset(arrr, idxr, valr) => {
                 let idx = self.rget(idxr);
@@ -119,42 +118,10 @@ impl State {
             }
             Nand(dest, var1, var2) => {
                 let newval = !((self.rget(var1)) & (self.rget(var2)));
-                //self.dump_regs();
-                //write!(stderr_raw(), "NANDING {:t} with {:t}\n", self.rget(var1), self.rget(var2));
-                //write!(stderr_raw(), "NAND returning {:t}\n", newval);
                 self.rset(dest, newval);
             }
             Halt => {
                 self.running = false
-            }
-            Move(dest, value) => {
-                self.rset(dest, value);
-            }
-            Load(array, newpc) => {
-                let arr = self.rget(array);
-                if arr != 0 {
-                    *(self.arrays.get_mut(&0)) = self.arrays.get(&arr).clone();
-                }
-                self.pc = self.rget(newpc);
-            }
-            Out(reg) => {
-                let ch = self.rget(reg);
-                match self.outfile {
-                    Some(ref mut file) => {
-                        write!(file, "{}", (ch as u8) as char);
-                    }
-                    None => {
-                        write!(stderr_raw(), "{}", (ch as u8) as char);
-                    }
-                }
-            }
-            In(reg) => {
-                let ch = stdin_raw().read_byte().unwrap();
-                /*if ch == ('p' as u8) {
-                    self.outfile = Some(BufferedWriter::new(File::create(&Path::new("out")).unwrap()));
-                    println!("Outputting to file now...");
-                }*/
-                self.rset(reg, ch as u32);
             }
             NewArr(dest, sizer) => {
                 let size = self.rget(sizer);
@@ -167,14 +134,44 @@ impl State {
                 let idx = self.rget(idxr);
                 self.arrays.remove(&idx);
             }
+            Out(reg) => {
+                let ch = self.rget(reg);
+                match self.outfile {
+                    Some(ref mut file) => {
+                        file.write_u8(ch as u8);
+                    }
+                    None => {
+                        stderr_raw().write_u8(ch as u8);
+                    }
+                }
+            }
+            In(reg) => {
+                let ch = stdin_raw().read_byte().unwrap();
+                /*if ch == ('p' as u8) {
+                    self.outfile = Some(BufferedWriter::new(File::create(&Path::new("out")).unwrap()));
+                    println!("Outputting to file now...");
+                }*/
+                self.rset(reg, ch as u32);
+            }
+            Load(array, newpc) => {
+                let arr = self.rget(array);
+                if arr != 0 {
+                    *(self.arrays.get_mut(&0)) = self.arrays.get(&arr).clone();
+                }
+                self.pc = self.rget(newpc);
+            }
+            Move(dest, value) => {
+                self.rset(dest, value);
+            }
+            Unknown(ins) => fail!("Attempt to execute unknown instruction: {}", ins)
         }
     }
-    fn dump_regs(&self) {
+    pub fn dump_regs(&self) {
         for (i, x) in self.registers.iter().enumerate() {
             write!(stderr_raw(), "{}: {}\n", i, x);
         }
     }
-    fn dump_arrays(&self) {
+    pub fn dump_arrays(&self) {
         for (k, v) in self.arrays.iter() {
             write!(stderr_raw(), "{}: {}\n", k, v);
         }
@@ -198,7 +195,8 @@ pub enum Instruction {
     Out(u32), //u32 to take in
     In(u32), //u32 to print
     Load(u32, u32), //Source1, Source2
-    Move(u32, u32) //Destination, Value
+    Move(u32, u32), //Destination, Value
+    Unknown(u32)
 }
 
 impl Instruction {
@@ -221,7 +219,7 @@ impl Instruction {
             11 => In(c),
             12 => Load(b, c),
             13 => Move((oper & 0b00001110000000000000000000000000) >> 25 , oper & 0b00000001111111111111111111111111),
-            a => fail!("Unknown instruction {}", a)
+            a => Unknown(a),
         }
     }
 }
