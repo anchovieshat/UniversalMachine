@@ -96,6 +96,7 @@ impl State {
                 let idx = self.rget(idxr);
                 let arr = self.rget(arrr);
                 let newval = *self.arrays.get_mut(&arr).get_mut(idx as uint);
+                self.rset(dest, newval);
             }
             Aset(arrr, idxr, valr) => {
                 let idx = self.rget(idxr);
